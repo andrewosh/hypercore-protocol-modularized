@@ -50,9 +50,7 @@ function ProtocolStream (opts) {
     self.push(data)
   })
   this._output.pause()
-  this._feeder.on('handshake', function () {
-    self.emit('handshake')
-  })
+  this._feeder.on('handshake', function () { self.emit('handshake') })
 
   this._firstFeed = true
 
@@ -76,6 +74,19 @@ ProtocolStream.prototype.setTimeout = function (ms, ontimeout) {
   if (this.destroyed) return
   if (ontimeout) this.once('timeout', ontimeout)
   // TODO: add rest of timeout management.
+}
+
+ProtocolStream.prototype.getConnectionInfo = function () {
+  return {
+    id: this._feeder.id,
+    ack: this._feeder.ack,
+    live: this._feeder.live,
+    userData: this._feeder.userData,
+    remoteId: this._feeder.remoteId,
+    remoteAck: this._feeder.remoteAck,
+    remoteLive: this._feeder.remoteLive,
+    remoteUserData: this._feeder.remoteUserData
+  }
 }
 
 // TODO: Reimplement once understood
