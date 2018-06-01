@@ -131,6 +131,7 @@ ProtocolStream.prototype.feed = function (key, opts) {
     this._output.setKey(key)
     this._input.setDiscoveryKey(feed.discoveryKey)
     this._input.uncork()
+    this._firstFeed = false
   }
   return feed
 }
