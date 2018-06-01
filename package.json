@@ -23,17 +23,21 @@
   },
   "homepage": "https://github.com/andrewosh/hypercore-protocol-modularized#readme",
   "devDependencies": {
-    "hypercore": "^6.15.0",
+    "choppa": "^1.0.2",
     "protocol-buffers": "^4.0.4",
-    "random-access-memory": "^3.0.0",
     "standard": "^11.0.1",
     "tape": "^4.9.0"
   },
   "dependencies": {
+    "buffer-alloc-unsafe": "^1.1.0",
+    "buffer-from": "^1.1.0",
     "inherits": "^2.0.3",
     "protocol-buffers-encodings": "^1.1.0",
     "pump": "^3.0.0",
     "pumpify": "^1.5.1",
-    "through2": "^2.0.3"
+    "sodium-universal": "^2.0.0",
+    "sorted-indexof": "^1.0.0",
+    "through2": "^2.0.3",
+    "varint": "^5.0.0"
   }
 }
