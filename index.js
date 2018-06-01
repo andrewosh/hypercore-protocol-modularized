@@ -36,7 +36,10 @@ function ProtocolStream (opts) {
   this._output.on('data', function (data) {
     self.push(data)
   })
-  this._output.pause()
+
+  // Corking until the keys are set on first feed
+  this._input.cork()
+
   this._feeder.on('handshake', function () { self.emit('handshake') })
   this._feeder.on('feed', function (feed) { self.emit('feed', feed) })
 
@@ -121,11 +124,13 @@ ProtocolStream.prototype._ontimeout = function () {
 }
 
 ProtocolStream.prototype.feed = function (key, opts) {
+  var feed = this._feeder.feed(key, opts)
   if (this._firstFeed) {
     // TODO: There should be better control-flow here (some way to send a key message).
     this._input.setKey(key)
     this._output.setKey(key)
-    this._firstFeed = false
+    this._input.setDiscoveryKey(feed.discoveryKey)
+    this._input.uncork()
   }
-  return this._feeder.feed(key, opts)
+  return feed
 }
