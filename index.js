@@ -19,19 +19,6 @@ function ProtocolStream (opts) {
   this._output = opts.encoderStream || EncoderStream(opts)
   this._feeder = opts.feedStream || FeedStream(opts)
 
-  // Debugging
-  /*
-  this._input.on('data', function (data) {
-    console.log('INPUT:', data)
-  })
-  this._output.on('data', function (data) {
-    console.log('OUTPUT:', data)
-  })
-  this._feeder.on('data', function (data) {
-    console.log('FEEDER OUTPUT:', data)
-  })
-  */
-
   // TODO: Reimplement once understood
   /*
   // Set if a timeout is specified
@@ -51,12 +38,19 @@ function ProtocolStream (opts) {
   })
   this._output.pause()
   this._feeder.on('handshake', function () { self.emit('handshake') })
+  this._feeder.on('feed', function (feed) { self.emit('feed', feed) })
 
   this._firstFeed = true
+  this.maybeFinalize = maybeFinalize
 
   if (opts.timeout !== 0 && opts.timeout !== false) {
     this.timeout = opts.timeout
     this.setTimeout(opts.timeout || 5000, this._ontimeout)
+  }
+
+  function maybeFinalize (err) {
+    if (err) self.destroy(err)
+    self._feeder.maybeFinalize()
   }
 }
 inherits(ProtocolStream, stream.Duplex)
@@ -68,6 +62,24 @@ ProtocolStream.prototype._write = function (data, enc, cb) {
 
 ProtocolStream.prototype._read = function () {
   // Do nothing.
+}
+
+ProtocolStream.prototype.destroy = function (err) {
+  if (this.destroyed) return
+  this.destroyed = true
+  if (err) this.emit('error', err)
+  this._close()
+  this.emit('close')
+}
+
+ProtocolStream.prototype._close = function () {
+  if (this._interval) clearInterval(this._interval)
+  this._output.close()
+  this._feeder.close()
+}
+
+ProtocolStream.prototype.finalize = function () {
+  this._feeder.finalize()
 }
 
 ProtocolStream.prototype.setTimeout = function (ms, ontimeout) {
