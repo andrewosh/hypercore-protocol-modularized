@@ -305,10 +305,12 @@ tape('first feed should be the same', function (t) {
   b.feed(OTHER_KEY)
 
   a.once('error', function () {
+    console.log('IN HERE')
     t.pass('a should error')
   })
 
   b.once('error', function () {
+    console.log('IN HERE')
     t.pass('b should error')
   })
 
@@ -338,7 +340,7 @@ tape('multiple feeds', function (t) {
   a.pipe(b).pipe(a)
 })
 
-tape('async feed', function (t) {
+tape.skip('async feed', function (t) {
   var a = protocol()
   var b = protocol()
 
@@ -347,7 +349,9 @@ tape('async feed', function (t) {
   ch1.request({index: 42})
 
   b.once('feed', function () {
+    console.log('B HAS FEED')
     setTimeout(function () {
+      console.log('HERE')
       var ch2 = b.feed(KEY)
       ch2.on('request', function (request) {
         t.same(request.index, 42)
@@ -356,6 +360,7 @@ tape('async feed', function (t) {
     }, 100)
   })
 
+  console.log('STARTING PIPE')
   a.pipe(b).pipe(a)
 })
 
@@ -426,7 +431,7 @@ tape('keep alives', function (t) {
   a.pipe(b).pipe(a)
 })
 
-tape('timeouts', function (t) {
+tape.skip('timeouts', function (t) {
   var a = protocol({timeout: false})
   var b = protocol({timeout: 100})
 
@@ -443,7 +448,7 @@ tape('timeouts', function (t) {
   a.pipe(b).pipe(a)
 })
 
-tape('expected feeds', function (t) {
+tape.skip('expected feeds', function (t) {
   var a = protocol({expectedFeeds: 1})
 
   a.resume()
@@ -457,7 +462,7 @@ tape('expected feeds', function (t) {
   ch.close()
 })
 
-tape('2 expected feeds', function (t) {
+tape.skip('2 expected feeds', function (t) {
   var a = protocol({expectedFeeds: 2})
   var created = 0
 
@@ -479,7 +484,7 @@ tape('2 expected feeds', function (t) {
   }, 100)
 })
 
-tape('message after ping', function (t) {
+tape.skip('message after ping', function (t) {
   t.plan(2)
 
   var a = protocol()

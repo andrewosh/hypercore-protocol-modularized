@@ -7,7 +7,6 @@ var EncoderStream = require('./lib/encode')
 var FeedStream = require('./lib/feed')
 
 module.exports = ProtocolStream
-
 function ProtocolStream (opts) {
   if (!(this instanceof ProtocolStream)) return new ProtocolStream(opts)
   if (!opts) opts = {}
@@ -15,8 +14,8 @@ function ProtocolStream (opts) {
 
   stream.Duplex.call(this)
 
-  this._input = opts.decoderStream || DecoderStream(opts)
-  this._output = opts.encoderStream || EncoderStream(opts)
+  this._input = new stream.PassThrough()
+  this._output = new stream.PassThrough()
   this._feeder = opts.feedStream || FeedStream(opts)
 
   // TODO: Reimplement once understood
@@ -26,24 +25,14 @@ function ProtocolStream (opts) {
   this._remoteHeartbeat = null
   */
 
-  this._pipeline = pumpify(
-    this._input,
-    this._feeder,
-    this._output
-  )
-
   var self = this
   this._output.on('data', function (data) {
     self.push(data)
   })
 
-  // Corking until the keys are set on first feed
-  this._input.cork()
-
   this._feeder.on('handshake', function () { self.emit('handshake') })
   this._feeder.on('feed', function (feed) { self.emit('feed', feed) })
 
-  this._firstFeed = true
   this.maybeFinalize = maybeFinalize
 
   if (opts.timeout !== 0 && opts.timeout !== false) {
@@ -57,6 +46,10 @@ function ProtocolStream (opts) {
   }
 }
 inherits(ProtocolStream, stream.Duplex)
+
+ProtocolStream.prototype.finalize = function () {
+  this._feeder.finalize()
+}
 
 ProtocolStream.prototype._write = function (data, enc, cb) {
   console.log('WRITING:', data)
@@ -77,12 +70,8 @@ ProtocolStream.prototype.destroy = function (err) {
 
 ProtocolStream.prototype._close = function () {
   if (this._interval) clearInterval(this._interval)
-  this._output.close()
+  if (this._encoder) this._encoder.close()
   this._feeder.close()
-}
-
-ProtocolStream.prototype.finalize = function () {
-  this._feeder.finalize()
 }
 
 ProtocolStream.prototype.setTimeout = function (ms, ontimeout) {
@@ -102,6 +91,10 @@ ProtocolStream.prototype.getConnectionInfo = function () {
     remoteLive: this._feeder.remoteLive,
     remoteUserData: this._feeder.remoteUserData
   }
+}
+
+ProtocolStream.prototype.remoteSupports = function (name) {
+  return this._feeder.remoteSupports(name)
 }
 
 // TODO: Reimplement once understood
@@ -124,14 +117,26 @@ ProtocolStream.prototype._ontimeout = function () {
 }
 
 ProtocolStream.prototype.feed = function (key, opts) {
+  var self = this
+
   var feed = this._feeder.feed(key, opts)
-  if (this._firstFeed) {
-    // TODO: There should be better control-flow here (some way to send a key message).
-    this._input.setKey(key)
-    this._output.setKey(key)
-    this._input.setDiscoveryKey(feed.discoveryKey)
-    this._input.uncork()
-    this._firstFeed = false
+
+  // Once the first Feed has been created, we can create the decoder/encoder.
+  if (!this._pipeline) {
+    this._decoder = this.opts.decoderStream || DecoderStream(key, feed.discoveryKey, this.opts)
+    this._encoder = this.opts.encoderStream || EncoderStream(key, this.opts)
+    // At first Feed time, we can connect all the stages together.
+    this._pipeline = pumpify(
+      this._input,
+      this._decoder,
+      this._feeder,
+      this._encoder,
+      this._output
+    )
   }
+  this._decoder.on('error', function (err) {
+    self.emit('error', err)
+  })
+
   return feed
 }
